@@ -1,0 +1,689 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Flex Reports - Transaction Reporting</title>
+
+  <!-- SheetJS reads the uploaded Excel / CSV file in the browser -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+
+  <style>
+    :root {
+      --bg: #f4f8f7;
+      --card: #fff;
+      --fg: #1f2d2d;
+      --muted: #6b7c7c;
+      --line: #dbe5e3;
+      --primary: #2a9d8f;
+      --accent: #f4a228;
+      --r: 12px;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--fg);
+      font-family: "Segoe UI", system-ui, sans-serif;
+    }
+
+    header {
+      background: #fff;
+      border-bottom: 1px solid var(--line);
+      position: sticky;
+      top: 0;
+      z-index: 5;
+    }
+
+    .bar {
+      max-width: 1200px;
+      margin: auto;
+      padding: 0 20px;
+      height: 60px;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .logo {
+      font-weight: 700;
+      font-size: 18px;
+      cursor: pointer;
+    }
+
+    .pill {
+      font-size: 12px;
+      background: #e3f4f1;
+      color: var(--primary);
+      padding: 4px 10px;
+      border-radius: 99px;
+    }
+
+    main {
+      max-width: 1200px;
+      margin: auto;
+      padding: 24px 20px;
+    }
+
+    .card {
+      background: #fff;
+      border: 1px solid var(--line);
+      border-radius: var(--r);
+      padding: 16px;
+    }
+
+    .grid {
+      display: grid;
+      gap: 12px;
+    }
+
+    .g2 {
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    }
+
+    .g3 {
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    }
+
+    .g4 {
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    }
+
+    .muted {
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    h1 {
+      font-size: 30px;
+      margin: 0 0 6px;
+    }
+
+    button,
+    select,
+    input {
+      font: inherit;
+    }
+
+    .btn {
+      background: var(--primary);
+      color: #fff;
+      border: 0;
+      border-radius: 8px;
+      padding: 8px 14px;
+      cursor: pointer;
+    }
+
+    .btn.out {
+      background: #fff;
+      color: var(--fg);
+      border: 1px solid var(--line);
+    }
+
+    select,
+    input {
+      width: 100%;
+      padding: 8px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #fff;
+    }
+
+    .tpl {
+      text-align: left;
+      cursor: pointer;
+      border: 2px solid var(--line);
+      border-radius: var(--r);
+      background: #fff;
+      padding: 16px;
+    }
+
+    .tpl.on {
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px #2a9d8f22;
+    }
+
+    .drop {
+      border: 2px dashed var(--line);
+      text-align: center;
+      padding: 40px;
+      cursor: pointer;
+    }
+
+    .drop.over {
+      border-color: var(--primary);
+      background: #2a9d8f0d;
+    }
+
+    .kpi b {
+      font-size: 24px;
+      display: block;
+    }
+
+    .row {
+      display: grid;
+      grid-template-columns: minmax(130px, 190px) 1fr auto;
+      gap: 10px;
+      align-items: center;
+      margin: 8px 0;
+      font-size: 14px;
+    }
+
+    .trk {
+      height: 14px;
+      background: #edf3f2;
+      border-radius: 99px;
+      overflow: hidden;
+    }
+
+    .trk i {
+      display: block;
+      height: 100%;
+      background: var(--primary);
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+
+    th,
+    td {
+      padding: 8px;
+      border-bottom: 1px solid var(--line);
+      text-align: left;
+      vertical-align: top;
+    }
+
+    th {
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .num {
+      text-align: right;
+      white-space: nowrap;
+    }
+
+    .hide {
+      display: none;
+    }
+
+    .err {
+      color: #c0392b;
+      margin-top: 10px;
+    }
+
+    label {
+      font-size: 12px;
+      color: var(--muted);
+      display: block;
+      margin-bottom: 4px;
+    }
+
+    details summary {
+      cursor: pointer;
+    }
+
+    .scroll {
+      overflow: auto;
+      max-height: 520px;
+    }
+
+    .memo {
+      min-width: 340px;
+    }
+
+    .section {
+      margin-bottom: 12px;
+    }
+
+    @media(max-width:650px) {
+      .row {
+        grid-template-columns: 110px 1fr auto;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="bar">
+      <div class="logo" id="home">Flex Reports</div>
+      <button class="btn out"
+            onclick="window.parent.location.href='index.html'">
+        Back to Reports
+    </button>
+      <span class="pill hide" id="tag"></span>
+      <button class="btn out hide" id="reset" style="margin-left:auto">Load new file</button>
+    </div>
+  </header>
+
+  <main id="app"></main>
+
+  <footer class="muted" style="text-align:center;padding:16px">
+    Parsed entirely in your browser. Nothing is uploaded.
+  </footer>
+
+  <script>
+    /* ================================================================
+       Flex Reports - Transaction Reporting
+       ================================================================ */
+
+    const $ = (s, e = document) => e.querySelector(s);
+    const esc = s => String(s ?? "").replace(/[&<>\"]/g, c => ({
+        "&": "&amp;",
+        "<": "&lt;",
+        ">": "&gt;",
+        '"': "&quot;"
+    }[c]));
+    const num = v => {
+        let n = parseFloat(String(v).replace(/[^0-9.\-]/g, ""));
+        return isNaN(n) ? 0 : n;
+    };
+    const usd = n => "$" + n.toLocaleString(undefined, { maximumFractionDigits: 2 });
+    const f1 = n => n.toLocaleString(undefined, { maximumFractionDigits: 1 });
+    /* ---------- State ---------- */
+    let selected = "transactions";
+    let ds = null;
+    let filters = {
+        category: "",
+        sub: "",
+        period: "",
+        type: "",
+        name: "",
+        date: "",
+        memo: ""
+    };
+    const T = {
+        labor: {
+            name: "Labor Hours",
+            tag: "Hours, overtime & gross pay by cost center"
+        },
+        transactions: {
+            name: "Transaction Reporting",
+            tag: "QuickBooks transactions by category, cost code, date, type and name"
+        }
+    };
+    /* ---------- Spreadsheet helpers ---------- */
+    function arr(buf) {
+        const wb = XLSX.read(buf, { type: "array" });
+        return XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], {
+            header: 1,
+            defval: "",
+            raw: false
+        });
+    }
+    function clean(v) {
+        return String(v ?? "").replace(/\s+/g, " ").trim();
+    }
+    /* ---------- Parsers (labor + QuickBooks) ---------- */
+    function parseLabor(buf) {
+        const m = arr(buf);
+        const blank = r => !(r || []).some(x => clean(x));
+        const r0 = m[0] || [];
+        const r1 = m[1] || [];
+        let mode;
+        let first;
+        if (blank(r0)) {
+            mode = 1;
+            first = 2;
+        }
+        else if (blank(r1) || r1.some(x => typeof x === "number")) {
+            mode = 0;
+            first = 1;
+        }
+        else {
+            mode = 2;
+            first = 2;
+        }
+        let carry = "";
+        let w = Math.max(r0.length, r1.length);
+        let top = Array.from({ length: w }, (_, i) => {
+            let v = clean(r0[i]);
+            if (v)
+                carry = v;
+            return mode === 2 ? (v || carry) : v;
+        });
+        let seen = {};
+        let cols = Array.from({ length: w }, (_, i) => {
+            let a = top[i];
+            let b = clean(r1[i]);
+            let k = mode === 0 ? a : mode === 1 ? b : (a && b && a !== b ? `${a} ${b}` : a || b);
+            k = k || `Column ${i + 1}`;
+            if (seen[k])
+                k += ` (${++seen[k]})`;
+            else
+                seen[k] = 1;
+            return k;
+        });
+        return {
+            kind: "labor",
+            cols,
+            rows: m.slice(first).filter(r => !blank(r)).map(r => Object.fromEntries(cols.map((c, i) => [c, r[i] ?? ""])))
+        };
+    }
+    function parseQBO(buf) {
+        const m = arr(buf);
+        const headers = (m[4] || []).slice(1, 7).map((x, i) => clean(x) || `Column ${i + 2}`);
+        const rows = [];
+        let category = "";
+        let sub = "";
+        for (let i = 5; i < m.length; i++) {
+            const r = m[i] || [];
+            const a = clean(r[0]);
+            const has = r.slice(1, 7).some(x => clean(x));
+            if (!a && !has)
+                continue;
+            if (/^total\b/i.test(a) || /^TOTAL$/i.test(a))
+                continue;
+            let hit = a.match(/^(\d{4})\s+(.+)$/);
+            if (hit) {
+                if (hit[1].endsWith("00")) {
+                    category = a;
+                    sub = "";
+                }
+                else
+                    sub = a;
+                if (!has)
+                    continue;
+            }
+            if (!category || !sub || !has)
+                continue;
+            let o = {
+                Category: category,
+                Subcategory: sub
+            };
+            headers.forEach((h, j) => o[h] = r[j + 1] ?? "");
+            rows.push(o);
+        }
+        return {
+            kind: "transactions",
+            cols: ["Category", "Subcategory", ...headers],
+            headers,
+            rows
+        };
+    }
+    /* ---------- Home screen and file loading ---------- */
+    function home() {
+        ds = null;
+        $("#tag").classList.add("hide");
+        $("#reset").classList.add("hide");
+        app.innerHTML = `<div style="text-align:center;padding:10px 0 24px">
+    <h1>TEA Reporting Dashboard</h1>
+    <div class="muted">Choose a report type and upload the matching Excel export.</div>
+    </div>
+    <div class="muted" style="margin-bottom:8px">1. Choose a report type</div>
+    <div class="grid g2 section">${Object.entries(T).filter(([k]) => k === "transactions").map(([k, v]) => `<button class="tpl ${k === selected ? "on" : ""}" data-t="${k}">
+    <b>${v.name}</b>
+    <div class="muted">${v.tag}</div>
+    </button>`).join("")}</div>
+    <div class="muted" style="margin-bottom:8px">2. Load your ${T[selected].name.toLowerCase()} file</div>
+    <div class="card drop" id="drop">
+    <b id="msg">Drop your Excel file here</b>
+    <div class="muted">or click to choose a .xlsx, .xls, or .csv file</div>
+    <input class="hide" type="file" id="file" accept=".xlsx,.xls,.csv">
+    <div class="err" id="err">
+    </div>
+    </div>`;
+        document.querySelectorAll("[data-t]").forEach(b => b.onclick = () => {
+            selected = b.dataset.t;
+            home();
+        });
+        let d = $("#drop");
+        let f = $("#file");
+        d.onclick = () => f.click();
+        f.onclick = e => e.stopPropagation();
+        f.onchange = () => f.files[0] && read(f.files[0]);
+        d.ondragover = e => {
+            e.preventDefault();
+            d.classList.add("over");
+        };
+        d.ondragleave = () => d.classList.remove("over");
+        d.ondrop = e => {
+            e.preventDefault();
+            d.classList.remove("over");
+            e.dataTransfer.files[0] && read(e.dataTransfer.files[0]);
+        };
+    }
+    function read(file) {
+        $("#msg").textContent = "Reading file…";
+        let r = new FileReader();
+        r.onload = e => {
+            try {
+                ds = selected === "transactions" ? parseQBO(e.target.result) : parseLabor(e.target.result);
+                ds.file = file.name;
+                if (!ds.rows.length)
+                    throw Error("No usable rows found. For Transaction Reporting, row 5 must contain Date, Transaction Type, Name, Memo/Description, Amount and Balance.");
+                filters = {
+                    category: "",
+                    sub: "",
+                    period: "",
+                    type: "",
+                    name: "",
+                    date: "",
+                    memo: ""
+                };
+                dashboard();
+            }
+            catch (x) {
+                $("#err").textContent = x.message;
+                $("#msg").textContent = "Drop your Excel file here";
+            }
+        };
+        r.readAsArrayBuffer(file);
+    }
+    /* ---------- Filter helpers ---------- */
+    function uniq(a) {
+        return [...new Set(a.filter(Boolean))].sort((a, b) => String(a).localeCompare(String(b), undefined, { numeric: true }));
+    }
+    function findCol(patterns) {
+        return ds.cols.find(c => patterns.some(p => p.test(c))) || "";
+    }
+    function options(a, v) {
+        return `<option value="">All</option>` + a.map(x => `<option ${x === v ? "selected" : ""} value="${esc(x)}">${esc(x)}</option>`).join("");
+    }
+    /* ---------- Dashboards ---------- */
+    function dashboard() {
+        if (ds.kind === "labor")
+            return laborDash();
+        transactionDash();
+    }
+    function laborDash() {
+        let cc = findCol([/job costing/i, /cost center/i, /department/i]);
+        let emp = findCol([/^employee$/i, /employee/i]);
+        let hrs = findCol([/base.*hours/i, /regular.*hours/i]);
+        let ot = findCol([/overtime.*hours/i, /1\.5.*hours/i]);
+        let pay = findCol([/^base pay gross pay$/i, /base.*gross.*pay/i]);
+        let opay = findCol([/^1\.5x overtime gross pay$/i, /1\.5x.*overtime.*gross.*pay/i]);
+        let per = findCol([/payroll name/i, /pay period/i]);
+        let rows = ds.rows.filter(r => (!filters.category || clean(r[cc]) === filters.category) && (!filters.sub || clean(r[emp]) === filters.sub) && (!filters.period || clean(r[per]) === filters.period));
+        let H = rows.reduce((s, r) => s + num(r[hrs]), 0);
+        let O = rows.reduce((s, r) => s + num(r[ot]), 0);
+        let P = rows.reduce((s, r) => s + num(r[pay]) + num(r[opay]), 0);
+        shell(`<div class="card section">
+    <b>Filters</b>
+    <div class="grid g3" style="margin-top:10px">
+    <div>
+    <label>Cost Center</label>
+    <select data-f="category">${options(uniq(ds.rows.map(r => clean(r[cc]))), filters.category)}</select>
+    </div>
+    <div>
+    <label>Employee</label>
+    <select data-f="sub">${options(uniq(ds.rows.map(r => clean(r[emp]))), filters.sub)}</select>
+    </div>${per ? `<div>
+    <label>Pay Period</label>
+    <select data-f="period">${options(uniq(ds.rows.map(r => clean(r[per]))), filters.period)}</select>
+    </div>` : ""}</div>
+    </div>
+    <div class="grid g4">
+    <div class="card kpi">
+    <b>${f1(H)}</b>
+    <span class="muted">Base hours</span>
+    </div>
+    <div class="card kpi">
+    <b>${f1(O)}</b>
+    <span class="muted">OT hours</span>
+    </div>
+    <div class="card kpi">
+    <b>${usd(P)}</b>
+    <span class="muted">Gross pay</span>
+    </div>
+    <div class="card kpi">
+    <b>${uniq(rows.map(r => clean(r[emp]))).length}</b>
+    <span class="muted">Employees</span>
+    </div>
+    </div>`);
+    }
+    function transactionDash() {
+        let date = findCol([/^date$/i]);
+        let type = findCol([/^transaction type$/i]);
+        let name = findCol([/^name$/i]);
+        let memo = findCol([/^memo\/description$/i, /memo/i]);
+        let amount = findCol([/^amount$/i]);
+        let balance = findCol([/^balance$/i]);
+        let all = ds.rows;
+        let rows = all.filter(r => (!filters.category || r.Category === filters.category) && (!filters.sub || r.Subcategory === filters.sub) && (!filters.type || clean(r[type]) === filters.type) && (!filters.name || clean(r[name]) === filters.name) && (!filters.date || clean(r[date]) === filters.date) && (!filters.memo || clean(r[memo]).toLowerCase().includes(filters.memo.toLowerCase())));
+        let total = rows.reduce((s, r) => s + num(r[amount]), 0);
+        let cats = {};
+        rows.forEach(r => cats[r.Category] = (cats[r.Category] || 0) + num(r[amount]));
+        let max = Math.max(...Object.values(cats).map(Math.abs), 1);
+        shell(`<div class="card section">
+    <b>Filters</b>
+    <div class="grid g3" style="margin-top:10px">
+    <div>
+    <label>Category</label>
+    <select data-f="category">${options(uniq(all.map(r => r.Category)), filters.category)}</select>
+    </div>
+    <div>
+    <label>Subcategory / Cost Code</label>
+    <select data-f="sub">${options(uniq(all.filter(r => !filters.category || r.Category === filters.category).map(r => r.Subcategory)), filters.sub)}</select>
+    </div>
+    <div>
+    <label>Date</label>
+    <select data-f="date">${options(uniq(all.map(r => clean(r[date]))), filters.date)}</select>
+    </div>
+    <div>
+    <label>Transaction Type</label>
+    <select data-f="type">${options(uniq(all.map(r => clean(r[type]))), filters.type)}</select>
+    </div>
+    <div>
+    <label>Name</label>
+    <select data-f="name">${options(uniq(all.map(r => clean(r[name]))), filters.name)}</select>
+    </div>
+    <div>
+    <label>Memo/Description contains</label>
+    <input id="memo" value="${esc(filters.memo)}" placeholder="Search memo text">
+    </div>
+    </div>
+    </div>
+    <div class="grid g4 section">
+    <div class="card kpi">
+    <b>${usd(total)}</b>
+    <span class="muted">Matching amount</span>
+    </div>
+    <div class="card kpi">
+    <b>${rows.length}</b>
+    <span class="muted">Transactions</span>
+    </div>
+    <div class="card kpi">
+    <b>${uniq(rows.map(r => r.Subcategory)).length}</b>
+    <span class="muted">Cost codes</span>
+    </div>
+    <div class="card kpi">
+    <b>${uniq(rows.map(r => r.Category)).length}</b>
+    <span class="muted">Categories</span>
+    </div>
+    </div>
+    <div class="grid g2 section">
+    <div class="card">
+    <b>Spend by category</b>
+    <div style="margin-top:10px">${Object.entries(cats).sort((a, b) => b[1] - a[1]).map(([k, v]) => `<div class="row">
+    <div>${esc(k)}</div>
+    <div class="trk">
+    <i style="width:${Math.abs(v) / max * 100}%">
+    </i>
+    </div>
+    <div class="muted">${usd(v)}</div>
+    </div>`).join("") || `<div class="muted">No data to display.</div>`}</div>
+    </div>
+    <div class="card">
+    <b>Top cost codes</b>
+    <div style="margin-top:10px">${Object.entries(rows.reduce((o, r) => (o[r.Subcategory] = (o[r.Subcategory] || 0) + num(r[amount]), o), {})).sort((a, b) => b[1] - a[1]).slice(0, 10).map(([k, v]) => `<div class="row">
+    <div>${esc(k)}</div>
+    <div class="trk">
+    <i style="width:${Math.abs(v) / Math.max(...rows.map(r => Math.abs(num(r[amount]))), 1) * 100}%">
+    </i>
+    </div>
+    <div class="muted">${usd(v)}</div>
+    </div>`).join("")}</div>
+    </div>
+    </div>
+    <div class="card">
+    <details open>
+    <summary>
+    <b>Transaction details</b> <span class="muted">— ${rows.length} matching rows</span>
+    </summary>
+    <div class="scroll" style="margin-top:10px">
+    <table>
+    <thead>
+    <tr>
+    <th>Date</th>
+    <th>Transaction Type</th>
+    <th>Name</th>
+    <th class="memo">Memo/Description</th>
+    <th>Category</th>
+    <th>Cost Code</th>
+    <th class="num">Amount</th>
+    <th class="num">Balance</th>
+    </tr>
+    </thead>
+    <tbody>${rows.map(r => `<tr>
+    <td>${esc(r[date])}</td>
+    <td>${esc(r[type])}</td>
+    <td>${esc(r[name])}</td>
+    <td class="memo">${esc(r[memo])}</td>
+    <td>${esc(r.Category)}</td>
+    <td>${esc(r.Subcategory)}</td>
+    <td class="num">${usd(num(r[amount]))}</td>
+    <td class="num">${usd(num(r[balance]))}</td>
+    </tr>`).join("") || `<tr>
+    <td colspan="8" class="muted">No transactions match the filters.</td>
+    </tr>`}</tbody>
+    </table>
+    </div>
+    </details>
+    </div>`);
+    }
+    /* ---------- Page shell ---------- */
+    function shell(content) {
+        $("#tag").textContent = `${T[selected].name} · ${ds.file}`;
+        $("#tag").classList.remove("hide");
+        $("#reset").classList.remove("hide");
+        app.innerHTML = `<div class="muted">${esc(ds.file)}</div>
+    <h1>${T[selected].name} dashboard</h1>
+    <div class="muted section">${T[selected].tag}</div>${content}`;
+        document.querySelectorAll("select[data-f]").forEach(x => x.onchange = () => {
+            filters[x.dataset.f] = x.value;
+            if (x.dataset.f === "category")
+                filters.sub = "";
+            dashboard();
+        });
+        let m = $("#memo");
+        if (m)
+            m.onchange = () => {
+                filters.memo = m.value;
+                dashboard();
+            };
+    }
+    const app = $("#app");
+    $("#reset").onclick = home;
+    $("#home").onclick = home;
+    home();
+  </script>
+</body>
+</html>

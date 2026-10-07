@@ -1,0 +1,161 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>TEA Reports</title>
+
+  <style>
+    :root {
+      --bg: #f4f8f7;
+      --fg: #1f2d2d;
+      --muted: #6b7c7c;
+      --line: #dbe5e3;
+      --primary: #2a9d8f;
+      --r: 12px;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--fg);
+      font-family: "Segoe UI", system-ui, sans-serif;
+    }
+
+    /* ---------- Header ---------- */
+    header {
+      height: 60px;
+      background: #fff;
+      border-bottom: 1px solid var(--line);
+      display: flex;
+      align-items: center;
+      padding: 0 22px;
+      gap: 12px;
+    }
+
+    header b {
+      font-size: 18px;
+    }
+
+    .pill {
+      font-size: 12px;
+      background: #e3f4f1;
+      color: var(--primary);
+      padding: 4px 10px;
+      border-radius: 99px;
+    }
+
+    /* ---------- Layout ---------- */
+    main {
+      max-width: 1200px;
+      margin: auto;
+      padding: 24px 20px;
+    }
+
+    h1 {
+      font-size: 30px;
+      margin: 0 0 6px;
+    }
+
+    .muted {
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    /* ---------- Report choices ---------- */
+    .choices {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(260px, 1fr));
+      gap: 12px;
+      margin: 24px 0;
+    }
+
+    button {
+      font: inherit;
+      text-align: left;
+      cursor: pointer;
+      border: 2px solid var(--line);
+      border-radius: var(--r);
+      background: #fff;
+      padding: 16px;
+    }
+
+    button.active {
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px #2a9d8f22;
+    }
+
+    /* ---------- Report viewer ---------- */
+    iframe {
+      width: 100%;
+      height: calc(100vh - 185px);
+      min-height: 720px;
+      border: 1px solid var(--line);
+      border-radius: var(--r);
+      background: #fff;
+      display: block;
+    }
+
+    @media (max-width: 650px) {
+      .choices {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <b>The Ember Alliance Reports</b>
+    <span class="pill" id="mode">Choose a report</span>
+  </header>
+
+  <main>
+    <div id="landing">
+      <h1>TEA Reporting Dashboard</h1>
+      <div class="muted">Choose the report workflow you want to use.</div>
+
+      <div class="choices">
+        <button id="labor">
+          <b>Labor Hours</b>
+          <div class="muted">Hours, overtime and gross pay by cost center</div>
+        </button>
+
+        <button id="transactions">
+          <b>Expense Reporting</b>
+          <div class="muted">Transaction by category and cost code</div>
+        </button>
+      </div>
+    </div>
+
+  </main>
+
+  <script>
+    // Each report is its own page, kept in the same folder as this file.
+    const reports = {
+      labor: {
+        label: "Labor Hours",
+        page: "labor.html"
+      },
+      transactions: {
+        label: "Transaction Reporting",
+        page: "transactions.html"
+      }
+    };
+
+    const landing = document.getElementById("landing");
+    const viewer = document.getElementById("view");
+    const modeLabel = document.getElementById("mode");
+
+    function openReport(type) {
+      window.location.href = reports[type].page;
+    }
+
+    document.getElementById("labor").onclick = () => openReport("labor");
+    document.getElementById("transactions").onclick = () => openReport("transactions");
+  </script>
+</body>
+</html>
